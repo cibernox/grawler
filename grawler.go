@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./urlinspector"
+	"./page"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,24 +19,21 @@ type result struct {
 
 var fetchingFlag sitemapEntry = sitemapEntry{}
 
-func InspectUrl(client urlinspector.Getter, url string, resultsChan chan *result) {
+func InspectUrl(client page.Getter, url string, resultsChan chan *result) {
 	fmt.Printf("...Fetching url %s\n", url)
-	inspector := urlinspector.UrlInspector{Url: url, Client: client}
-	links, err := inspector.Links()
-	if err != nil {
+	page := page.Page{Url: url, Client: client}
+
+	links, assets := page.Links(), page.Assets()
+
+	if links == nil || assets == nil {
 		resultsChan <- nil
 		return
 	}
-	assets, err := inspector.Assets()
-	if err != nil {
-		resultsChan <- nil
-		return
-	}
-	entry := sitemapEntry{links, assets}
-	resultsChan <- &result{url, entry}
+
+	resultsChan <- &result{url, sitemapEntry{links, assets}}
 }
 
-func Crawl(client urlinspector.Getter, entryUrl string) map[string]*sitemapEntry {
+func Crawl(client page.Getter, entryUrl string) map[string]*sitemapEntry {
 	resultsChan := make(chan *result)
 	sitemap := make(map[string]*sitemapEntry)
 
