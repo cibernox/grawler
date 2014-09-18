@@ -6,15 +6,19 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 )
 
 var contactRegex = regexp.MustCompile("^(mailto|tel):")
 var binaryFileRegex = regexp.MustCompile("\x2E(pdf|jpg|jpeg|gif|svg|png|doc|docx)$")
 
-func filterBlanks(ary []string) []string {
+// Removes blanks and duplicates
+func filterUrls(ary []string) []string {
 	result := make([]string, 0, len(ary))
+	found := make(map[string]bool)
 	for _, e := range ary {
-		if e != "" {
+		if e != "" && !found[e] {
+			found[e] = true
 			result = append(result, e)
 		}
 	}
@@ -66,7 +70,13 @@ func (page *Page) sanitizeUrl(rawUrl string, filterNonUrls bool) string {
 		}
 	}
 
-	return parsedUrl.String()
+	// Remove trailing slash
+	finalUrl := parsedUrl.String()
+	if strings.HasSuffix(finalUrl, "/") {
+		finalUrl = finalUrl[:len(finalUrl)-1]
+	}
+
+	return finalUrl
 }
 
 func (page *Page) Document() *goquery.Document {
@@ -109,7 +119,7 @@ func (page *Page) Links() []string {
 		return page.sanitizeUrl(href, true)
 	})
 
-	return filterBlanks(urls)
+	return filterUrls(urls)
 }
 
 func (page *Page) Assets() []string {
@@ -127,5 +137,5 @@ func (page *Page) Assets() []string {
 	})
 	urls := append(srcs, hrefs...)
 
-	return filterBlanks(urls)
+	return filterUrls(urls)
 }
